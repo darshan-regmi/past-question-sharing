@@ -3,10 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
+import { ChevronLeft } from "lucide-react"
 import MainNav from "@/components/main-nav"
+import { AdvancedStudyMode } from "@/components/advanced-study-mode"
+import { flashcards } from "@/lib/data"
 
 interface StudyPageProps {
   params: {
@@ -15,63 +15,27 @@ interface StudyPageProps {
 }
 
 export default function StudyPage({ params }: StudyPageProps) {
-  // In a real app, you would fetch these flashcards based on the moduleId
-  const flashcards = [
-    {
-      id: "1",
-      question: "What is the time complexity of a binary search algorithm?",
-      answer: "O(log n)",
-    },
-    {
-      id: "2",
-      question: "What does CPU stand for?",
-      answer: "Central Processing Unit",
-    },
-    {
-      id: "3",
-      question: "What is the difference between a stack and a queue?",
-      answer: "A stack follows LIFO (Last In First Out) principle, while a queue follows FIFO (First In First Out).",
-    },
-    {
-      id: "4",
-      question: "What is recursion?",
-      answer: "Recursion is when a function calls itself directly or indirectly to solve a problem.",
-    },
-  ]
+  const moduleId = params.moduleId;
+  const moduleFlashcards = flashcards[moduleId] || [];
+  const [studyComplete, setStudyComplete] = useState(false);
+  const [studyStats, setStudyStats] = useState<{
+    totalCards: number;
+    correctCount: number;
+    incorrectCount: number;
+    skippedCount: number;
+    timeTaken: number;
+  } | null>(null);
 
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [flipped, setFlipped] = useState(false)
-  const [completed, setCompleted] = useState<string[]>([])
-
-  const currentCard = flashcards[currentIndex]
-  const progress = (completed.length / flashcards.length) * 100
-
-  const handleNext = () => {
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-      setFlipped(false)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-      setFlipped(false)
-    }
-  }
-
-  const handleFlip = () => {
-    setFlipped(!flipped)
-    if (!flipped && !completed.includes(currentCard.id)) {
-      setCompleted([...completed, currentCard.id])
-    }
-  }
-
-  const handleReset = () => {
-    setCurrentIndex(0)
-    setFlipped(false)
-    setCompleted([])
-  }
+  const handleStudyComplete = (stats: {
+    totalCards: number;
+    correctCount: number;
+    incorrectCount: number;
+    skippedCount: number;
+    timeTaken: number;
+  }) => {
+    setStudyComplete(true);
+    setStudyStats(stats);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -81,53 +45,72 @@ export default function StudyPage({ params }: StudyPageProps) {
 
       <MainNav />
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <Link href={`/modules/${params.moduleId}`} className="inline-flex items-center text-sm">
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back to module
         </Link>
-        <div className="text-sm text-muted-foreground">
-          Card {currentIndex + 1} of {flashcards.length}
-        </div>
       </div>
 
-      <div className="mb-4">
-        <Progress value={progress} className="h-2" />
-      </div>
-
-      <div className="flex justify-center mb-8">
-        <Card
-          className="w-full max-w-2xl h-64 cursor-pointer transition-all duration-500 perspective"
-          onClick={handleFlip}
-        >
-          <div className={`relative w-full h-full transition-transform duration-500 ${flipped ? "rotate-y-180" : ""}`}>
-            <CardContent className="absolute w-full h-full p-6 flex flex-col justify-center items-center backface-hidden">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Question:</h3>
-              <p className="text-center text-lg">{currentCard.question}</p>
-              <p className="mt-4 text-sm text-muted-foreground">Click to reveal answer</p>
-            </CardContent>
-            <CardContent className="absolute w-full h-full p-6 flex flex-col justify-center items-center backface-hidden rotate-y-180 bg-muted/30">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Answer:</h3>
-              <p className="text-center text-lg">{currentCard.answer}</p>
-            </CardContent>
+      {studyComplete && studyStats ? (
+        <div className="max-w-2xl mx-auto bg-muted/20 rounded-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Study Session Complete!</h2>
+          
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-card p-4 rounded-lg">
+              <div className="text-3xl font-bold">{studyStats.totalCards}</div>
+              <div className="text-sm text-muted-foreground">Total Cards</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg">
+              <div className="text-3xl font-bold text-green-600">
+                {Math.round((studyStats.correctCount / studyStats.totalCards) * 100)}%
+              </div>
+              <div className="text-sm text-muted-foreground">Accuracy</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg">
+              <div className="text-3xl font-bold text-green-600">{studyStats.correctCount}</div>
+              <div className="text-sm text-muted-foreground">Correct</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg">
+              <div className="text-3xl font-bold text-red-600">{studyStats.incorrectCount}</div>
+              <div className="text-sm text-muted-foreground">Incorrect</div>
+            </div>
           </div>
-        </Card>
-      </div>
-
-      <div className="flex justify-center gap-4">
-        <Button variant="outline" onClick={handlePrevious} disabled={currentIndex === 0}>
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          Previous
-        </Button>
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="mr-1 h-4 w-4" />
-          Reset
-        </Button>
-        <Button onClick={handleNext} disabled={currentIndex === flashcards.length - 1}>
-          Next
-          <ChevronRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
+          
+          <div className="mb-6">
+            <p className="text-muted-foreground">
+              Time taken: {Math.floor(studyStats.timeTaken / 60)}m {studyStats.timeTaken % 60}s
+            </p>
+          </div>
+          
+          <div className="flex gap-4 justify-center">
+            <Button onClick={() => setStudyComplete(false)}>Study Again</Button>
+            <Link href={`/modules/${params.moduleId}`}>
+              <Button variant="outline">Return to Module</Button>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto">
+          {moduleFlashcards.length > 0 ? (
+            <AdvancedStudyMode 
+              flashcards={moduleFlashcards} 
+              moduleId={moduleId} 
+              onComplete={handleStudyComplete}
+            />
+          ) : (
+            <div className="text-center p-12 border rounded-lg">
+              <h2 className="text-2xl font-bold mb-2">No flashcards available</h2>
+              <p className="text-muted-foreground mb-4">
+                This module doesn't have any flashcards yet.
+              </p>
+              <Link href={`/modules/${params.moduleId}/create`}>
+                <Button>Create First Flashcard</Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

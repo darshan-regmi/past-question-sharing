@@ -1,11 +1,28 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Plus } from "lucide-react"
 import ModuleList from "@/components/module-list"
 import MainNav from "@/components/main-nav"
+import { FilterBar } from "@/components/filter-bar"
+import { modules, getSubjects, filterModules } from "@/lib/data"
+import { FilterOptions, Module } from "@/lib/types"
 
 export default function ModulesPage() {
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({})
+  const [filteredModules, setFilteredModules] = useState<Module[]>(modules)
+  const subjects = getSubjects()
+  
+  // Filter modules based on filter options
+  useEffect(() => {
+    const filtered = filterModules({
+      query: filterOptions.searchQuery,
+      subject: filterOptions.subject
+    })
+    setFilteredModules(filtered)
+  }, [filterOptions])
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8 text-center">
@@ -14,32 +31,38 @@ export default function ModulesPage() {
 
       <MainNav />
 
-      <div className="flex max-w-md mx-auto gap-2 mb-8">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Search modules..." className="pl-8" />
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">All Modules</h2>
+          <Link href="/create-module">
+            <Button>
+              <Plus className="mr-1 h-4 w-4" />
+              Create Module
+            </Button>
+          </Link>
         </div>
-        <Link href="/create-module">
-          <Button>Create Module</Button>
-        </Link>
+        
+        <FilterBar
+          options={filterOptions}
+          onFilterChange={setFilterOptions}
+          subjects={subjects}
+        />
       </div>
 
-      <main>
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">All Modules</h2>
-          <ModuleList
-            modules={[
-              { id: "cs101", title: "Introduction to Computer Science", count: 42, subject: "Computer Science" },
-              { id: "math201", title: "Linear Algebra", count: 36, subject: "Mathematics" },
-              { id: "bio150", title: "Cell Biology", count: 28, subject: "Biology" },
-              { id: "hist101", title: "World History", count: 53, subject: "History" },
-              { id: "phys202", title: "Quantum Mechanics", count: 17, subject: "Physics" },
-              { id: "eng305", title: "Modern Literature", count: 23, subject: "English" },
-              { id: "chem101", title: "General Chemistry", count: 31, subject: "Chemistry" },
-              { id: "psych220", title: "Cognitive Psychology", count: 19, subject: "Psychology" },
-            ]}
-          />
-        </section>
+      <main className="max-w-4xl mx-auto">
+        {filteredModules.length > 0 ? (
+          <ModuleList modules={filteredModules} />
+        ) : (
+          <div className="text-center py-12 border rounded-lg bg-muted/20">
+            <p className="text-muted-foreground mb-4">No modules match your search criteria</p>
+            <Button 
+              variant="link" 
+              onClick={() => setFilterOptions({})}
+            >
+              Clear all filters
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   )
